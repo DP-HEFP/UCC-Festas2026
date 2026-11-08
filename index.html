@@ -116,6 +116,8 @@ tr:last-child td{border-bottom:0}
 .gm-row:last-child{border-bottom:0}
 .gm-row small{display:block;color:var(--muted)}
 .gm-row .btn{padding:7px 12px;font-size:14px}
+.pick input:disabled+label{cursor:default;opacity:.85}
+.pick input:disabled:not(:checked)+label{opacity:.55}
 .note{margin-top:8px;font-size:14px;color:var(--muted)}
 @media (max-width:520px){
   .shift{flex-direction:column;align-items:stretch}
@@ -154,6 +156,10 @@ tr:last-child td{border-bottom:0}
         <div class="actions">
           <button class="btn" id="save" disabled>Guardar preferências</button>
           <span class="msg" id="msg" aria-live="polite"></span>
+        </div>
+        <div id="cfm" class="notice" hidden>
+          <b id="cfm-t"></b>
+          <div class="row" style="margin-top:10px"><button class="btn" id="cfm-go">Confirmar e guardar</button><button class="btn ghost" id="cfm-back">Voltar</button></div>
         </div>
         <p class="hint" id="pending-hint"></p>
       </div>
@@ -194,6 +200,7 @@ tr:last-child td{border-bottom:0}
         <div class="gm-tabs">
           <button class="btn ghost" data-gm="rm">Retirar pessoas</button>
           <button class="btn ghost" data-gm="add">Adicionar pessoas</button>
+          <button class="btn ghost" data-gm="unlock">Desbloquear</button>
           <button class="btn ghost" data-gm="clear">Apagar tudo</button>
           <button class="btn ghost" id="gm-exit">Sair da gestão</button>
         </div>
@@ -202,6 +209,11 @@ tr:last-child td{border-bottom:0}
           <div class="list" id="gm-rmlist" style="margin-top:10px"></div>
           <h3 class="gm-h">Pessoas retiradas</h3>
           <div class="list" id="gm-rmed"></div>
+        </div>
+        <div class="card gm-pane" id="gm-unlock" hidden>
+          <p style="margin-top:0" class="hint">Desbloquear permite à pessoa voltar a alterar a sua resposta. As preferências guardadas mantêm-se até ela guardar de novo.</p>
+          <input type="search" id="un-q" placeholder="Pesquisar nome ou número" aria-label="Pesquisar pessoa a desbloquear">
+          <div class="list" id="un-list" style="margin-top:10px"></div>
         </div>
         <div class="card gm-pane" id="gm-add" hidden>
           <div class="gm-form">
@@ -288,15 +300,28 @@ function refreshSave(){
   $('save').disabled = !(current && db);
   $('pending-hint').textContent = n ? `${n} turno(s) assinalado(s).` : 'Se não tiver preferências, guarde sem assinalar nenhum turno.';
 }
-function loadEntry(r){
+const isLocked = e => !!e && e.locked!==false;
+function setLocked(on){
+  document.querySelectorAll('#shifts input[type=checkbox]').forEach(i=>i.disabled=on);
+  $('obs').disabled=on;
+  document.querySelector('#shifts .actions').hidden=on;
+  $('pending-hint').hidden=on;
+  $('cfm').hidden=true;
+}
+function loadEntry(r,justSaved){
   const e=entries.get(norm(r.n));
   for(const s of SHIFTS){
     const v=e&&e.turnos&&e.turnos[s.k];
     $(`${s.k}-D`).checked = v==='D';
   }
   $('obs').value = e&&e.obs||'';
-  const notice = e ? `<div class="notice">Já registou as suas preferências em ${fmt(e.ts)}. Pode alterar e guardar de novo.</div>` : '';
+  const lock=isLocked(e);
+  let notice='';
+  if(justSaved) notice=`<div class="notice" style="background:var(--ok-bg);color:var(--ok)">Preferências guardadas. Obrigado!</div>`;
+  else if(lock) notice=`<div class="notice">Já registou as suas preferências em ${fmt(e.ts)}. Para as alterar, contacte a coordenação.</div>`;
+  else if(e) notice=`<div class="notice">A coordenação desbloqueou a sua resposta. Pode alterar e guardar de novo.</div>`;
   $('who').innerHTML = `<div class="who">${esc(r.nome)}<small>${esc(r.cat)} · ${esc(r.un)}</small></div>${notice}`;
+  setLocked(lock);
   refreshSave();
 }
 $('num').addEventListener('input',()=>{
@@ -310,20 +335,29 @@ $('num').addEventListener('input',()=>{
   }
   current=r; $('shifts').hidden=false; loadEntry(r);
 });
-$('save').onclick=async()=>{
+$('save').onclick=()=>{
   if(!current||!db) return;
-  const a=answers();
-  $('save').disabled=true; $('msg').className='msg'; $('msg').textContent='A guardar...';
+  $('cfm-t').textContent=`Está a responder como ${current.nome} (n.º ${current.n}). Confirma?`;
+  $('cfm').hidden=false; $('save').disabled=true; $('cfm-go').focus();
+};
+$('cfm-back').onclick=()=>{ $('cfm').hidden=true; refreshSave(); };
+$('cfm-go').onclick=async()=>{
+  if(!current||!db) return;
+  const a=answers(); const who=current;
+  $('cfm-go').disabled=true; $('msg').className='msg'; $('msg').textContent='A guardar...';
   try{
     await saveEntry({
-      num:current.n, nome:current.nome, cat:current.cat, un:current.un,
-      turnos:a, obs:$('obs').value.trim().slice(0,400), ts:Date.now()
+      num:who.n, nome:who.nome, cat:who.cat, un:who.un,
+      turnos:a, obs:$('obs').value.trim().slice(0,400), ts:Date.now(), locked:true
     });
-    $('msg').className='msg ok'; $('msg').textContent='Preferências guardadas. Obrigado!';
+    $('msg').textContent=''; loadEntry(who,true);
   }catch(e){
-    $('msg').className='msg bad'; $('msg').textContent='Não foi possível guardar ('+(e&&e.message||'erro')+'). Tente novamente dentro de instantes.';
+    $('cfm').hidden=true;
+    $('msg').className='msg bad';
+    $('msg').textContent = e&&e.message==='locked' ? 'Esta pessoa já tem uma resposta registada. Contacte a coordenação para a alterar.' : 'Não foi possível guardar ('+(e&&e.message||'erro')+'). Tente novamente dentro de instantes.';
+    if(e&&e.message==='locked') loadEntry(who);
   }
-  refreshSave();
+  $('cfm-go').disabled=false; refreshSave();
 };
 function fmt(ts){
   const d=new Date(ts); const p=n=>String(n).padStart(2,'0');
@@ -405,6 +439,8 @@ async function fetchBin(){
 }
 async function saveEntry(entry){
   const rec=await fetchBin();               /* ler o mais recente imediatamente antes de escrever */
+  const prev=rec.entries['n'+norm(entry.num)];
+  if(isLocked(prev)) throw new Error('locked');   /* já existe resposta bloqueada */
   rec.entries['n'+norm(entry.num)]=entry;
   const r=await call(API,{method:'PUT',body:JSON.stringify(rec)});
   if(!r.ok) throw new Error('PUT '+r.status);
@@ -432,14 +468,23 @@ async function mutate(fn){
   entries=toMap(rec); applyRoster(rec); renderDash(); renderGm();
 }
 function showPane(k){
-  ['rm','add','clear'].forEach(p=>{ $('gm-'+p).hidden = p!==k; });
+  ['rm','unlock','add','clear'].forEach(p=>{ $('gm-'+p).hidden = p!==k; });
   document.querySelectorAll('[data-gm]').forEach(b=>b.setAttribute('aria-pressed', b.dataset.gm===k?'true':'false'));
   gmMsg('');
 }
 function rowHtml(r,label,act){
   return `<div class="gm-row"><div>${esc(r.nome)}<small>${esc(r.cat)} · ${esc(r.un)} · ${esc(r.n)}</small></div><button class="btn ghost" data-act="${act}" data-n="${esc(r.n)}">${label}</button></div>`;
 }
+function renderUnlock(){
+  const q=$('un-q').value.trim().toLowerCase();
+  const L=ROSTER.filter(r=>entries.has(norm(r.n))).filter(r=>!q||r.nome.toLowerCase().includes(q)||norm(r.n).includes(norm(q)||'§')).sort(byName);
+  $('un-list').innerHTML = L.length?L.map(r=>{
+    const open=entries.get(norm(r.n)).locked===false;
+    return `<div class="gm-row"><div>${esc(r.nome)}<small>${esc(r.cat)} · ${esc(r.un)} · ${esc(r.n)}</small></div><button class="btn ghost" data-act="unlock" data-n="${esc(r.n)}" ${open?'disabled':''}>${open?'Desbloqueado':'Desbloquear'}</button></div>`;
+  }).join(''):'<div class="empty">Ainda ninguém respondeu.</div>';
+}
 function renderGm(){
+  renderUnlock();
   const q=$('gm-q').value.trim().toLowerCase();
   const L=ROSTER.filter(r=>!q||r.nome.toLowerCase().includes(q)||norm(r.n).includes(norm(q)||'§')).sort(byName);
   $('gm-rmlist').innerHTML = L.length?L.map(r=>rowHtml(r,'Retirar','rm')).join(''):'<div class="empty">Sem resultados.</div>';
@@ -457,8 +502,21 @@ $('gm-enter').onclick=async()=>{
 };
 $('gm-pw').addEventListener('keydown',e=>{ if(e.key==='Enter') $('gm-enter').click(); });
 $('gm-exit').onclick=()=>{ unlocked=false; $('gm-menu').hidden=true; $('gm-open').hidden=false; };
-document.querySelectorAll('[data-gm]').forEach(b=>b.addEventListener('click',()=>{ showPane(b.dataset.gm); if(b.dataset.gm==='rm') renderGm(); }));
+document.querySelectorAll('[data-gm]').forEach(b=>b.addEventListener('click',()=>{ showPane(b.dataset.gm); if(b.dataset.gm==='rm'||b.dataset.gm==='unlock') renderGm(); }));
 $('gm-q').addEventListener('input',renderGm);
+$('un-q').addEventListener('input',renderUnlock);
+$('gm-unlock').addEventListener('click',async e=>{
+  const b=e.target.closest('button[data-act=unlock]'); if(!b||!db) return;
+  b.disabled=true;
+  try{
+    const k='n'+norm(b.dataset.n);
+    const rec=await fetchBin();
+    if(rec.entries[k]) rec.entries[k].locked=false;
+    const r=await call(API,{method:'PUT',body:JSON.stringify(rec)});
+    if(!r.ok) throw new Error('PUT '+r.status);
+    entries=toMap(rec); applyRoster(rec); renderDash(); renderGm(); gmMsg('Resposta desbloqueada.','ok');
+  }catch(err){ gmMsg('Não foi possível desbloquear ('+(err&&err.message||'erro')+').','bad'); b.disabled=false; }
+});
 let armed=null;
 $('gm-rm').addEventListener('click',async e=>{
   const b=e.target.closest('button[data-act]'); if(!b||!db) return;
