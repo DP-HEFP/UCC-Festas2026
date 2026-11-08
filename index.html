@@ -107,6 +107,15 @@ tr:last-child td{border-bottom:0}
 .empty{padding:16px;color:var(--muted)}
 .admin{margin-top:32px;padding-top:18px;border-top:1px solid var(--line)}
 .admin input[type=password]{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:11px 12px}
+.gm-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}
+.gm-tabs .btn[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.gm-pane{margin-bottom:10px}
+.gm-h{margin:18px 0 8px;font:700 17px var(--font-display)}
+.gm-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.gm-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 10px;border-bottom:1px solid var(--line)}
+.gm-row:last-child{border-bottom:0}
+.gm-row small{display:block;color:var(--muted)}
+.gm-row .btn{padding:7px 12px;font-size:14px}
 .note{margin-top:8px;font-size:14px;color:var(--muted)}
 @media (max-width:520px){
   .shift{flex-direction:column;align-items:stretch}
@@ -171,23 +180,55 @@ tr:last-child td{border-bottom:0}
     </div>
     <div id="obslist"></div>
     <div class="admin">
-      <button class="btn ghost" id="clr-open">Limpar lista de entradas</button>
-      <div id="clr-box" hidden>
-        <p class="hint">Apaga todas as preferências guardadas. Esta ação não se desfaz.</p>
-        <label class="lbl" for="clr-pw">Palavra-passe</label>
+      <button class="btn ghost" id="gm-open">Gestão</button>
+      <div id="gm-login" hidden>
+        <label class="lbl" for="gm-pw">Palavra-passe</label>
         <div class="row">
-          <input type="password" id="clr-pw" autocomplete="off" style="max-width:260px">
-          <button class="btn" id="clr-go" style="background:var(--no);color:#fff">Apagar tudo</button>
-          <button class="btn ghost" id="clr-cancel">Cancelar</button>
+          <input type="password" id="gm-pw" autocomplete="off" style="max-width:260px">
+          <button class="btn" id="gm-enter">Entrar</button>
+          <button class="btn ghost" id="gm-cancel">Cancelar</button>
         </div>
-        <p class="msg" id="clr-msg" aria-live="polite"></p>
+        <p class="msg" id="gm-lmsg" aria-live="polite"></p>
+      </div>
+      <div id="gm-menu" hidden>
+        <div class="gm-tabs">
+          <button class="btn ghost" data-gm="rm">Retirar pessoas</button>
+          <button class="btn ghost" data-gm="add">Adicionar pessoas</button>
+          <button class="btn ghost" data-gm="clear">Apagar tudo</button>
+          <button class="btn ghost" id="gm-exit">Sair da gestão</button>
+        </div>
+        <div class="card gm-pane" id="gm-rm" hidden>
+          <input type="search" id="gm-q" placeholder="Pesquisar nome ou número" aria-label="Pesquisar pessoa a retirar">
+          <div class="list" id="gm-rmlist" style="margin-top:10px"></div>
+          <h3 class="gm-h">Pessoas retiradas</h3>
+          <div class="list" id="gm-rmed"></div>
+        </div>
+        <div class="card gm-pane" id="gm-add" hidden>
+          <div class="gm-form">
+            <div><label class="lbl" for="ad-n">Número mecanográfico</label><input type="text" id="ad-n" inputmode="numeric" autocomplete="off"></div>
+            <div><label class="lbl" for="ad-nome">Nome</label><input type="text" id="ad-nome" autocomplete="off"></div>
+            <div><label class="lbl" for="ad-cat">Categoria</label><select id="ad-cat"><option>Enfermeiro</option><option>Auxiliar</option></select></div>
+            <div><label class="lbl" for="ad-un">Unidade</label><input type="text" id="ad-un" list="unlist" autocomplete="off"><datalist id="unlist"></datalist></div>
+          </div>
+          <div class="actions"><button class="btn" id="ad-go">Adicionar à lista</button></div>
+        </div>
+        <div class="card gm-pane" id="gm-clear" hidden>
+          <p style="margin-top:0"><b>Apagar tudo</b> remove todas as preferências guardadas. A lista de pessoas mantém-se. Esta ação não se desfaz.</p>
+          <label style="display:flex;gap:8px;align-items:center;margin-bottom:12px"><input type="checkbox" id="cl-ok"> Confirmo que quero apagar todas as entradas</label>
+          <label class="lbl" for="cl-pw">Palavra-passe</label>
+          <div class="row">
+            <input type="password" id="cl-pw" autocomplete="off" style="max-width:260px">
+            <button class="btn" id="cl-go" style="background:var(--no);color:#fff">Apagar tudo</button>
+          </div>
+        </div>
+        <p class="msg" id="gm-msg" aria-live="polite"></p>
       </div>
     </div>
   </section>
 </div>
 
 <script>
-const ROSTER = [{"n": "163794", "nome": "Joana Jacinto", "cat": "Enfermeiro", "un": "UC"}, {"n": "160740", "nome": "Mónica Pinto", "cat": "Enfermeiro", "un": "UC"}, {"n": "164032", "nome": "Patrícia Almeida", "cat": "Enfermeiro", "un": "UC"}, {"n": "164188", "nome": "Ricardo Moreira", "cat": "Enfermeiro", "un": "UC"}, {"n": "160622", "nome": "Rita Gonçalves", "cat": "Enfermeiro", "un": "UC"}, {"n": "160626", "nome": "Teresa Nicola", "cat": "Enfermeiro", "un": "UC"}, {"n": "164030", "nome": "Beatriz Mourato", "cat": "Enfermeiro", "un": "UC"}, {"n": "163932", "nome": "Bruno Lobao", "cat": "Enfermeiro", "un": "UMDR"}, {"n": "163626", "nome": "Marisa Morais", "cat": "Enfermeiro", "un": "UMDR"}, {"n": "160697", "nome": "Ana Soares", "cat": "Enfermeiro", "un": "UMDR"}, {"n": "160604", "nome": "Daniela Vieira", "cat": "Enfermeiro", "un": "UMDR"}, {"n": "160606", "nome": "Helena Santos", "cat": "Enfermeiro", "un": "UMDR"}, {"n": "160742", "nome": "Marisa Cordeiro", "cat": "Enfermeiro", "un": "UMDR"}, {"n": "160677", "nome": "Ana Mendes", "cat": "Enfermeiro", "un": "ULDM"}, {"n": "061149", "nome": "Carla Ferreira", "cat": "Enfermeiro", "un": "ULDM"}, {"n": "164191", "nome": "Maria Silva", "cat": "Enfermeiro", "un": "ULDM"}, {"n": "163625", "nome": "Isabel Duarte", "cat": "Enfermeiro", "un": "ULDM"}, {"n": "160783", "nome": "Neoken Zhou", "cat": "Enfermeiro", "un": "ULDM"}, {"n": "160747", "nome": "Nuno Abreu", "cat": "Enfermeiro", "un": "ULDM"}, {"n": "160774", "nome": "Sara Marafona", "cat": "Enfermeiro", "un": "ULDM"}, {"n": "160586", "nome": "Sara Montoia", "cat": "Enfermeiro", "un": "ULDM"}, {"n": "506609", "nome": "Sofia Pinto", "cat": "Enfermeiro", "un": "CPS"}, {"n": "503727", "nome": "Anelba Freitas", "cat": "Enfermeiro", "un": "CPS"}, {"n": "506641", "nome": "Carolina Lopes", "cat": "Enfermeiro", "un": "CPS"}, {"n": "507368", "nome": "Gonçalo Barbosa", "cat": "Enfermeiro", "un": "CPS"}, {"n": "506823", "nome": "Leonor Sousa", "cat": "Enfermeiro", "un": "CPS"}, {"n": "506541", "nome": "Joana Linhares", "cat": "Enfermeiro", "un": "CPS"}, {"n": "505366", "nome": "Maria Silva", "cat": "Enfermeiro", "un": "CPS"}, {"n": "507334", "nome": "Mariana Valadares", "cat": "Enfermeiro", "un": "CPS"}, {"n": "508239", "nome": "Ana Cardoso", "cat": "Enfermeiro", "un": "CPS"}, {"n": "506828", "nome": "Beatriz Cruz", "cat": "Enfermeiro", "un": "CPS"}, {"n": "506822", "nome": "Inês Dionísio", "cat": "Enfermeiro", "un": "CPS"}, {"n": "507324", "nome": "Inês Fonseca", "cat": "Enfermeiro", "un": "CPS"}, {"n": "507220", "nome": "João Silva", "cat": "Enfermeiro", "un": "CPS"}, {"n": "506207", "nome": "Lúcia Martins", "cat": "Enfermeiro", "un": "CPS"}, {"n": "507767", "nome": "Mariana Cunha", "cat": "Enfermeiro", "un": "CPS"}, {"n": "508243", "nome": "Paula Sousa", "cat": "Enfermeiro", "un": "CPS"}, {"n": "507814", "nome": "Rita Melo", "cat": "Enfermeiro", "un": "CPS"}, {"n": "506531", "nome": "Rita Santos", "cat": "Enfermeiro", "un": "CPS"}, {"n": "506630", "nome": "Teresa Rodrigues", "cat": "Enfermeiro", "un": "CPS"}, {"n": "508242", "nome": "Lurdes Pinto", "cat": "Enfermeiro", "un": "CPS"}, {"n": "508377", "nome": "Mariana Almeida", "cat": "Enfermeiro", "un": "CPS"}, {"n": "508460", "nome": "Diana Sousa", "cat": "Enfermeiro", "un": "CPS"}, {"n": "508441", "nome": "Inês Nogueira", "cat": "Enfermeiro", "un": "CPS"}, {"n": "508512", "nome": "Carolina Dias", "cat": "Enfermeiro", "un": "CPS"}, {"n": "160360", "nome": "Elisabete Lopes", "cat": "Auxiliar", "un": "UC"}, {"n": "160652", "nome": "Sara Frazão", "cat": "Auxiliar", "un": "UC"}, {"n": "163159", "nome": "Vania Rocha", "cat": "Auxiliar", "un": "UC"}, {"n": "160607", "nome": "Anabela Bernardes", "cat": "Auxiliar", "un": "UC"}, {"n": "160640", "nome": "Gracinda Ferreira", "cat": "Auxiliar", "un": "UC"}, {"n": "160656", "nome": "Juliana Moura", "cat": "Auxiliar", "un": "UC"}, {"n": "160648", "nome": "Lígia Sousa", "cat": "Auxiliar", "un": "UC"}, {"n": "160668", "nome": "Emília Costa", "cat": "Auxiliar", "un": "UC"}, {"n": "160579", "nome": "Margarida Fernandes", "cat": "Auxiliar", "un": "UC"}, {"n": "160587", "nome": "Susana Ribeiro", "cat": "Auxiliar", "un": "UC"}, {"n": "163297", "nome": "Beatriz Ferreira", "cat": "Auxiliar", "un": "UC"}, {"n": "160588", "nome": "Ana Coelho", "cat": "Auxiliar", "un": "UC"}, {"n": "160722", "nome": "Maria Barbosa", "cat": "Auxiliar", "un": "UC"}, {"n": "164361", "nome": "Ana Pires", "cat": "Auxiliar", "un": "UMDR"}, {"n": "160532", "nome": "Carina Sousa", "cat": "Auxiliar", "un": "UMDR"}, {"n": "164299", "nome": "Ivo Santos", "cat": "Auxiliar", "un": "UMDR"}, {"n": "164153", "nome": "Jéssica Silva", "cat": "Auxiliar", "un": "UMDR"}, {"n": "160389", "nome": "Sandra Arques", "cat": "Auxiliar", "un": "UMDR"}, {"n": "160678", "nome": "Teresa Leite", "cat": "Auxiliar", "un": "UMDR"}, {"n": "160630", "nome": "Beatriz Freitas", "cat": "Auxiliar", "un": "UMDR"}, {"n": "160634", "nome": "Bruno Silva", "cat": "Auxiliar", "un": "UMDR"}, {"n": "160645", "nome": "Francisca Eusébio", "cat": "Auxiliar", "un": "UMDR"}, {"n": "160666", "nome": "Maria do Céu Santos", "cat": "Auxiliar", "un": "UMDR"}, {"n": "160511", "nome": "Tânia Dias", "cat": "Auxiliar", "un": "UMDR"}, {"n": "160590", "nome": "Ana Moreira", "cat": "Auxiliar", "un": "UMDR"}, {"n": "164489", "nome": "Miriam Mendes", "cat": "Auxiliar", "un": "UMDR"}, {"n": "164129", "nome": "Manuela Alberta Ribeiro", "cat": "Auxiliar", "un": "ULDM"}, {"n": "160580", "nome": "Ana A. Oliveira", "cat": "Auxiliar", "un": "ULDM"}, {"n": "160625", "nome": "Beatriz Sousa", "cat": "Auxiliar", "un": "ULDM"}, {"n": "163221", "nome": "Carolina Abreu", "cat": "Auxiliar", "un": "ULDM"}, {"n": "163719", "nome": "Deborah Castro", "cat": "Auxiliar", "un": "ULDM"}, {"n": "160370", "nome": "Maria Pinheiro", "cat": "Auxiliar", "un": "ULDM"}, {"n": "160728", "nome": "Ramiro Borges", "cat": "Auxiliar", "un": "ULDM"}, {"n": "163219", "nome": "Tânia Sofia Almeida", "cat": "Auxiliar", "un": "ULDM"}, {"n": "160570", "nome": "Adriana Cardoso", "cat": "Auxiliar", "un": "ULDM"}, {"n": "160584", "nome": "Ana Sousa", "cat": "Auxiliar", "un": "ULDM"}, {"n": "160562", "nome": "Ana Carlos", "cat": "Auxiliar", "un": "ULDM"}, {"n": "160644", "nome": "Diana Santos", "cat": "Auxiliar", "un": "ULDM"}, {"n": "160653", "nome": "Joana Toriz", "cat": "Auxiliar", "un": "ULDM"}, {"n": "160663", "nome": "Maria Fernandes", "cat": "Auxiliar", "un": "ULDM"}, {"n": "160670", "nome": "Maria Paula Costa", "cat": "Auxiliar", "un": "ULDM"}, {"n": "160674", "nome": "Rita Neves", "cat": "Auxiliar", "un": "ULDM"}];
+const BASE = [{"n": "163794", "nome": "Joana Jacinto", "cat": "Enfermeiro", "un": "UC"}, {"n": "160740", "nome": "Mónica Pinto", "cat": "Enfermeiro", "un": "UC"}, {"n": "164032", "nome": "Patrícia Almeida", "cat": "Enfermeiro", "un": "UC"}, {"n": "164188", "nome": "Ricardo Moreira", "cat": "Enfermeiro", "un": "UC"}, {"n": "160622", "nome": "Rita Gonçalves", "cat": "Enfermeiro", "un": "UC"}, {"n": "160626", "nome": "Teresa Nicola", "cat": "Enfermeiro", "un": "UC"}, {"n": "164030", "nome": "Beatriz Mourato", "cat": "Enfermeiro", "un": "UC"}, {"n": "163932", "nome": "Bruno Lobao", "cat": "Enfermeiro", "un": "UMDR"}, {"n": "163626", "nome": "Marisa Morais", "cat": "Enfermeiro", "un": "UMDR"}, {"n": "160697", "nome": "Ana Soares", "cat": "Enfermeiro", "un": "UMDR"}, {"n": "160604", "nome": "Daniela Vieira", "cat": "Enfermeiro", "un": "UMDR"}, {"n": "160606", "nome": "Helena Santos", "cat": "Enfermeiro", "un": "UMDR"}, {"n": "160742", "nome": "Marisa Cordeiro", "cat": "Enfermeiro", "un": "UMDR"}, {"n": "160677", "nome": "Ana Mendes", "cat": "Enfermeiro", "un": "ULDM"}, {"n": "061149", "nome": "Carla Ferreira", "cat": "Enfermeiro", "un": "ULDM"}, {"n": "164191", "nome": "Maria Silva", "cat": "Enfermeiro", "un": "ULDM"}, {"n": "163625", "nome": "Isabel Duarte", "cat": "Enfermeiro", "un": "ULDM"}, {"n": "160783", "nome": "Neoken Zhou", "cat": "Enfermeiro", "un": "ULDM"}, {"n": "160747", "nome": "Nuno Abreu", "cat": "Enfermeiro", "un": "ULDM"}, {"n": "160774", "nome": "Sara Marafona", "cat": "Enfermeiro", "un": "ULDM"}, {"n": "160586", "nome": "Sara Montoia", "cat": "Enfermeiro", "un": "ULDM"}, {"n": "506609", "nome": "Sofia Pinto", "cat": "Enfermeiro", "un": "CPS"}, {"n": "503727", "nome": "Anelba Freitas", "cat": "Enfermeiro", "un": "CPS"}, {"n": "506641", "nome": "Carolina Lopes", "cat": "Enfermeiro", "un": "CPS"}, {"n": "507368", "nome": "Gonçalo Barbosa", "cat": "Enfermeiro", "un": "CPS"}, {"n": "506823", "nome": "Leonor Sousa", "cat": "Enfermeiro", "un": "CPS"}, {"n": "506541", "nome": "Joana Linhares", "cat": "Enfermeiro", "un": "CPS"}, {"n": "505366", "nome": "Maria Silva", "cat": "Enfermeiro", "un": "CPS"}, {"n": "507334", "nome": "Mariana Valadares", "cat": "Enfermeiro", "un": "CPS"}, {"n": "508239", "nome": "Ana Cardoso", "cat": "Enfermeiro", "un": "CPS"}, {"n": "506828", "nome": "Beatriz Cruz", "cat": "Enfermeiro", "un": "CPS"}, {"n": "506822", "nome": "Inês Dionísio", "cat": "Enfermeiro", "un": "CPS"}, {"n": "507324", "nome": "Inês Fonseca", "cat": "Enfermeiro", "un": "CPS"}, {"n": "507220", "nome": "João Silva", "cat": "Enfermeiro", "un": "CPS"}, {"n": "506207", "nome": "Lúcia Martins", "cat": "Enfermeiro", "un": "CPS"}, {"n": "507767", "nome": "Mariana Cunha", "cat": "Enfermeiro", "un": "CPS"}, {"n": "508243", "nome": "Paula Sousa", "cat": "Enfermeiro", "un": "CPS"}, {"n": "507814", "nome": "Rita Melo", "cat": "Enfermeiro", "un": "CPS"}, {"n": "506531", "nome": "Rita Santos", "cat": "Enfermeiro", "un": "CPS"}, {"n": "506630", "nome": "Teresa Rodrigues", "cat": "Enfermeiro", "un": "CPS"}, {"n": "508242", "nome": "Lurdes Pinto", "cat": "Enfermeiro", "un": "CPS"}, {"n": "508377", "nome": "Mariana Almeida", "cat": "Enfermeiro", "un": "CPS"}, {"n": "508460", "nome": "Diana Sousa", "cat": "Enfermeiro", "un": "CPS"}, {"n": "508441", "nome": "Inês Nogueira", "cat": "Enfermeiro", "un": "CPS"}, {"n": "508512", "nome": "Carolina Dias", "cat": "Enfermeiro", "un": "CPS"}, {"n": "160360", "nome": "Elisabete Lopes", "cat": "Auxiliar", "un": "UC"}, {"n": "160652", "nome": "Sara Frazão", "cat": "Auxiliar", "un": "UC"}, {"n": "163159", "nome": "Vania Rocha", "cat": "Auxiliar", "un": "UC"}, {"n": "160607", "nome": "Anabela Bernardes", "cat": "Auxiliar", "un": "UC"}, {"n": "160640", "nome": "Gracinda Ferreira", "cat": "Auxiliar", "un": "UC"}, {"n": "160656", "nome": "Juliana Moura", "cat": "Auxiliar", "un": "UC"}, {"n": "160648", "nome": "Lígia Sousa", "cat": "Auxiliar", "un": "UC"}, {"n": "160668", "nome": "Emília Costa", "cat": "Auxiliar", "un": "UC"}, {"n": "160579", "nome": "Margarida Fernandes", "cat": "Auxiliar", "un": "UC"}, {"n": "160587", "nome": "Susana Ribeiro", "cat": "Auxiliar", "un": "UC"}, {"n": "163297", "nome": "Beatriz Ferreira", "cat": "Auxiliar", "un": "UC"}, {"n": "160588", "nome": "Ana Coelho", "cat": "Auxiliar", "un": "UC"}, {"n": "160722", "nome": "Maria Barbosa", "cat": "Auxiliar", "un": "UC"}, {"n": "164361", "nome": "Ana Pires", "cat": "Auxiliar", "un": "UMDR"}, {"n": "160532", "nome": "Carina Sousa", "cat": "Auxiliar", "un": "UMDR"}, {"n": "164299", "nome": "Ivo Santos", "cat": "Auxiliar", "un": "UMDR"}, {"n": "164153", "nome": "Jéssica Silva", "cat": "Auxiliar", "un": "UMDR"}, {"n": "160389", "nome": "Sandra Arques", "cat": "Auxiliar", "un": "UMDR"}, {"n": "160678", "nome": "Teresa Leite", "cat": "Auxiliar", "un": "UMDR"}, {"n": "160630", "nome": "Beatriz Freitas", "cat": "Auxiliar", "un": "UMDR"}, {"n": "160634", "nome": "Bruno Silva", "cat": "Auxiliar", "un": "UMDR"}, {"n": "160645", "nome": "Francisca Eusébio", "cat": "Auxiliar", "un": "UMDR"}, {"n": "160666", "nome": "Maria do Céu Santos", "cat": "Auxiliar", "un": "UMDR"}, {"n": "160511", "nome": "Tânia Dias", "cat": "Auxiliar", "un": "UMDR"}, {"n": "160590", "nome": "Ana Moreira", "cat": "Auxiliar", "un": "UMDR"}, {"n": "164489", "nome": "Miriam Mendes", "cat": "Auxiliar", "un": "UMDR"}, {"n": "164129", "nome": "Manuela Alberta Ribeiro", "cat": "Auxiliar", "un": "ULDM"}, {"n": "160580", "nome": "Ana A. Oliveira", "cat": "Auxiliar", "un": "ULDM"}, {"n": "160625", "nome": "Beatriz Sousa", "cat": "Auxiliar", "un": "ULDM"}, {"n": "163221", "nome": "Carolina Abreu", "cat": "Auxiliar", "un": "ULDM"}, {"n": "163719", "nome": "Deborah Castro", "cat": "Auxiliar", "un": "ULDM"}, {"n": "160370", "nome": "Maria Pinheiro", "cat": "Auxiliar", "un": "ULDM"}, {"n": "160728", "nome": "Ramiro Borges", "cat": "Auxiliar", "un": "ULDM"}, {"n": "163219", "nome": "Tânia Sofia Almeida", "cat": "Auxiliar", "un": "ULDM"}, {"n": "160570", "nome": "Adriana Cardoso", "cat": "Auxiliar", "un": "ULDM"}, {"n": "160584", "nome": "Ana Sousa", "cat": "Auxiliar", "un": "ULDM"}, {"n": "160562", "nome": "Ana Carlos", "cat": "Auxiliar", "un": "ULDM"}, {"n": "160644", "nome": "Diana Santos", "cat": "Auxiliar", "un": "ULDM"}, {"n": "160653", "nome": "Joana Toriz", "cat": "Auxiliar", "un": "ULDM"}, {"n": "160663", "nome": "Maria Fernandes", "cat": "Auxiliar", "un": "ULDM"}, {"n": "160670", "nome": "Maria Paula Costa", "cat": "Auxiliar", "un": "ULDM"}, {"n": "160674", "nome": "Rita Neves", "cat": "Auxiliar", "un": "ULDM"}];
 const SHIFTS = [
   {k:'d24t',g:'natal',day:'24 dez',turno:'Tarde',h:'Véspera de Natal'},
   {k:'d24n',g:'natal',day:'24 dez',turno:'Noite',h:'Véspera de Natal'},
@@ -199,7 +240,7 @@ const SHIFTS = [
   {k:'d01t',g:'ano',day:'1 jan',turno:'Tarde',h:'Ano Novo'}
 ];
 const norm = s => String(s||'').replace(/\D/g,'').replace(/^0+/,'');
-const BY = new Map(ROSTER.map(r=>[norm(r.n),r]));
+let ROSTER = BASE.slice(), BY = new Map(ROSTER.map(r=>[norm(r.n),r])), rosterState={added:[],removed:[]};
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 /* ---- CONFIGURAÇÃO JSONBin (preencher antes de publicar) ---- */
@@ -280,7 +321,7 @@ $('save').onclick=async()=>{
     });
     $('msg').className='msg ok'; $('msg').textContent='Preferências guardadas. Obrigado!';
   }catch(e){
-    $('msg').className='msg bad'; $('msg').textContent='Não foi possível guardar. Tente novamente dentro de instantes.';
+    $('msg').className='msg bad'; $('msg').textContent='Não foi possível guardar ('+(e&&e.message||'erro')+'). Tente novamente dentro de instantes.';
   }
   refreshSave();
 };
@@ -290,8 +331,23 @@ function fmt(ts){
 }
 
 /* ---- dashboard ---- */
-const UNITS=[...new Set(ROSTER.map(r=>r.un))];
-UNITS.forEach(u=>{const o=document.createElement('option');o.textContent=u;o.value=u;$('fun').appendChild(o);});
+let UNITS=[];
+function setUnits(){
+  UNITS=[...new Set(ROSTER.map(r=>r.un))];
+  const sel=$('fun'), v=sel.value;
+  sel.innerHTML='<option value="">Todas as unidades</option>';
+  UNITS.forEach(u=>{const o=document.createElement('option');o.textContent=u;o.value=u;sel.appendChild(o);});
+  sel.value=UNITS.includes(v)?v:'';
+  $('unlist').innerHTML=UNITS.map(u=>`<option value="${esc(u)}">`).join('');
+}
+function applyRoster(rec){
+  const ro=(rec&&rec.roster)||{};
+  rosterState={added:ro.added||[],removed:ro.removed||[]};
+  const rm=new Set(rosterState.removed.map(norm));
+  ROSTER=BASE.filter(r=>!rm.has(norm(r.n))).concat(rosterState.added);
+  BY=new Map(ROSTER.map(r=>[norm(r.n),r]));
+  setUnits();
+}
 const byName=(a,b)=>a.nome.localeCompare(b.nome,'pt');
 
 function renderDash(){
@@ -352,34 +408,105 @@ async function saveEntry(entry){
   rec.entries['n'+norm(entry.num)]=entry;
   const r=await call(API,{method:'PUT',body:JSON.stringify(rec)});
   if(!r.ok) throw new Error('PUT '+r.status);
-  entries=toMap(rec); renderDash();
+  entries=toMap(rec); applyRoster(rec); renderDash();
 }
 async function refresh(){
-  try{ entries=toMap(await fetchBin()); status(''); renderDash(); refreshSave(); }
+  try{ const rec=await fetchBin(); entries=toMap(rec); applyRoster(rec); status(''); renderDash(); if(unlocked) renderGm(); refreshSave(); }
   catch(e){ status('Não foi possível atualizar os dados. Os valores mostrados podem estar desatualizados.'); }
 }
-/* ---- limpar lista (protegido por palavra-passe) ---- */
+/* ---- gestão (protegida por palavra-passe) ---- */
 const PW_HASH='e668d35dfc9e8fe004ae486ffe0e70f5501e52bd37434605133e89dc7d0d6cd2';
+let unlocked=false;
 async function sha256(s){
   const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s));
   return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('');
 }
-$('clr-open').onclick=()=>{ $('clr-box').hidden=false; $('clr-open').hidden=true; $('clr-pw').focus(); };
-$('clr-cancel').onclick=()=>{ $('clr-box').hidden=true; $('clr-open').hidden=false; $('clr-pw').value=''; $('clr-msg').textContent=''; };
-$('clr-go').onclick=async()=>{
-  const m=$('clr-msg'); m.className='msg';
-  if(!db){ m.classList.add('bad'); m.textContent='Sem ligação à base de dados.'; return; }
-  let h=''; try{ h=await sha256($('clr-pw').value); }catch(e){}
-  if(h!==PW_HASH){ m.classList.add('bad'); m.textContent='Palavra-passe incorreta.'; return; }
-  m.textContent='A apagar...';
+async function pwOk(v){ try{ return (await sha256(v))===PW_HASH; }catch(e){ return false; } }
+function gmMsg(text,cls){ const m=$('gm-msg'); m.className='msg '+(cls||''); m.textContent=text||''; }
+async function mutate(fn){
+  const rec=await fetchBin();
+  rec.roster=rec.roster||{}; rec.roster.added=rec.roster.added||[]; rec.roster.removed=rec.roster.removed||[];
+  fn(rec);
+  const r=await call(API,{method:'PUT',body:JSON.stringify(rec)});
+  if(!r.ok) throw new Error('PUT '+r.status);
+  entries=toMap(rec); applyRoster(rec); renderDash(); renderGm();
+}
+function showPane(k){
+  ['rm','add','clear'].forEach(p=>{ $('gm-'+p).hidden = p!==k; });
+  document.querySelectorAll('[data-gm]').forEach(b=>b.setAttribute('aria-pressed', b.dataset.gm===k?'true':'false'));
+  gmMsg('');
+}
+function rowHtml(r,label,act){
+  return `<div class="gm-row"><div>${esc(r.nome)}<small>${esc(r.cat)} · ${esc(r.un)} · ${esc(r.n)}</small></div><button class="btn ghost" data-act="${act}" data-n="${esc(r.n)}">${label}</button></div>`;
+}
+function renderGm(){
+  const q=$('gm-q').value.trim().toLowerCase();
+  const L=ROSTER.filter(r=>!q||r.nome.toLowerCase().includes(q)||norm(r.n).includes(norm(q)||'§')).sort(byName);
+  $('gm-rmlist').innerHTML = L.length?L.map(r=>rowHtml(r,'Retirar','rm')).join(''):'<div class="empty">Sem resultados.</div>';
+  const rm=new Set(rosterState.removed.map(norm));
+  const R=BASE.filter(r=>rm.has(norm(r.n))).sort(byName);
+  $('gm-rmed').innerHTML = R.length?R.map(r=>rowHtml(r,'Repor','back')).join(''):'<div class="empty">Ninguém foi retirado.</div>';
+}
+$('gm-open').onclick=()=>{ if(unlocked){$('gm-menu').hidden=false;} else {$('gm-login').hidden=false; $('gm-pw').focus();} $('gm-open').hidden=true; };
+$('gm-cancel').onclick=()=>{ $('gm-login').hidden=true; $('gm-open').hidden=false; $('gm-pw').value=''; $('gm-lmsg').textContent=''; };
+$('gm-enter').onclick=async()=>{
+  const m=$('gm-lmsg'); m.className='msg';
+  if(!(await pwOk($('gm-pw').value))){ m.classList.add('bad'); m.textContent='Palavra-passe incorreta.'; return; }
+  unlocked=true; $('gm-pw').value=''; m.textContent=''; $('gm-login').hidden=true; $('gm-menu').hidden=false;
+  showPane('rm'); renderGm();
+};
+$('gm-pw').addEventListener('keydown',e=>{ if(e.key==='Enter') $('gm-enter').click(); });
+$('gm-exit').onclick=()=>{ unlocked=false; $('gm-menu').hidden=true; $('gm-open').hidden=false; };
+document.querySelectorAll('[data-gm]').forEach(b=>b.addEventListener('click',()=>{ showPane(b.dataset.gm); if(b.dataset.gm==='rm') renderGm(); }));
+$('gm-q').addEventListener('input',renderGm);
+let armed=null;
+$('gm-rm').addEventListener('click',async e=>{
+  const b=e.target.closest('button[data-act]'); if(!b||!db) return;
+  const n=b.dataset.n, act=b.dataset.act;
+  if(act==='rm' && armed!==n){ armed=n; b.textContent='Confirmar'; setTimeout(()=>{ if(armed===n){ armed=null; if(b.isConnected) b.textContent='Retirar'; } },3000); return; }
+  armed=null; b.disabled=true;
   try{
-    const r=await call(API,{method:'PUT',body:JSON.stringify({entries:{}})});
+    await mutate(rec=>{
+      const k=norm(n);
+      if(act==='rm'){
+        const ia=rec.roster.added.findIndex(a=>norm(a.n)===k);
+        if(ia>=0) rec.roster.added.splice(ia,1); else rec.roster.removed.push(n);
+        delete rec.entries['n'+k];
+      }else{
+        rec.roster.removed=rec.roster.removed.filter(x=>norm(x)!==k);
+      }
+    });
+    gmMsg(act==='rm'?'Pessoa retirada da lista.':'Pessoa reposta na lista.','ok');
+  }catch(err){ gmMsg('Não foi possível guardar ('+(err&&err.message||'erro')+'). Tente novamente.','bad'); b.disabled=false; }
+});
+$('ad-go').onclick=async()=>{
+  if(!db) return;
+  const n=$('ad-n').value.replace(/\s/g,''), nome=$('ad-nome').value.trim().replace(/\s+/g,' '), cat=$('ad-cat').value, un=$('ad-un').value.trim();
+  if(!/^\d{4,8}$/.test(n)||nome.length<3||!un){ gmMsg('Preencha o número (só dígitos), o nome e a unidade.','bad'); return; }
+  if(BY.has(norm(n))){ gmMsg('Este número já está na lista.','bad'); return; }
+  if(BASE.some(r=>norm(r.n)===norm(n))){ gmMsg('Este número pertence a uma pessoa retirada. Use Repor em Retirar pessoas.','bad'); return; }
+  $('ad-go').disabled=true;
+  try{
+    await mutate(rec=>{ rec.roster.added.push({n,nome,cat,un}); });
+    ['ad-n','ad-nome','ad-un'].forEach(i=>$(i).value=''); gmMsg(nome+' adicionado(a) à lista.','ok');
+  }catch(err){ gmMsg('Não foi possível guardar ('+(err&&err.message||'erro')+'). Tente novamente.','bad'); }
+  $('ad-go').disabled=false;
+};
+$('cl-go').onclick=async()=>{
+  if(!db) return;
+  if(!$('cl-ok').checked){ gmMsg('Assinale a confirmação antes de apagar.','bad'); return; }
+  if(!(await pwOk($('cl-pw').value))){ gmMsg('Palavra-passe incorreta.','bad'); return; }
+  $('cl-go').disabled=true; gmMsg('A apagar...');
+  try{
+    const rec=await fetchBin(); rec.entries={};
+    const r=await call(API,{method:'PUT',body:JSON.stringify(rec)});
     if(!r.ok) throw new Error(r.status);
     entries=new Map(); renderDash(); refreshSave();
-    m.classList.add('ok'); m.textContent='Lista limpa.'; $('clr-pw').value='';
-  }catch(e){ m.classList.add('bad'); m.textContent='Não foi possível apagar. Tente novamente.'; }
+    $('cl-pw').value=''; $('cl-ok').checked=false; gmMsg('Todas as entradas foram apagadas.','ok');
+  }catch(err){ gmMsg('Não foi possível apagar ('+(err&&err.message||'erro')+'). Tente novamente.','bad'); }
+  $('cl-go').disabled=false;
 };
-buildShifts(); renderDash();
+setUnits(); buildShifts(); renderDash();
 if(JSONBIN_BIN_ID.startsWith('COLOCAR')){
   status('Configuração em falta: preencha JSONBIN_BIN_ID e JSONBIN_ACCESS_KEY no início do código.');
 }else{
